@@ -5,7 +5,6 @@ const GenerateGuidelines = () => {
   const [selectedOption, setSelectedOption] = useState("codebase");
   const [codebasePath, setCodebasePath] = useState("");
   const [filePaths, setFilePaths] = useState([]);
-  const [compliancePath, setCompliancePath] = useState("");
   const [modelType, setModelType] = useState("Gpt4o_mini");
   const [provider, setProvider] = useState("Gpt");
   const [showError, setShowError] = useState(false);
@@ -35,10 +34,49 @@ const GenerateGuidelines = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+
+  //   if ((selectedOption === "codebase" && !codebasePath) ||
+  //       (selectedOption === "files" && filePaths.length === 0)) {
+  //     setShowError(true);
+  //     return;
+  //   }
+
+  //   const formData = new FormData();
+  //   formData.append('selectedOption', selectedOption);
+  //   formData.append('provider', provider);
+  //   formData.append('modelType', modelType);
+
+  //   // For file inputs, use the actual File objects
+  //   if (selectedOption === 'files') {
+  //     Array.from(filePathsInputRef.current.files).forEach(file => {
+  //       formData.append('files', file);
+  //     });
+  //   } else {
+  //     // For codebase, you'll need to handle directory traversal
+  //     Array.from(codebaseInputRef.current.files).forEach(file => {
+  //       formData.append('files', file);
+  //     });
+  //   }
+
+  //   try {
+  //     const response = await fetch('http://localhost:5000/api/generate_guidelines', {
+  //       method: 'POST',
+  //       body: formData,
+  //     });
+
+  //     const data = await response.json();
+  //     console.log('Guidelines generation started:', data);
+  //     // Handle success
+  //   } catch (error) {
+  //     console.error('Error:', error);
+  //     // Handle error
+  //   }
+  // };
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Check if required fields are empty
     if (
       (selectedOption === "codebase" && !codebasePath) ||
       (selectedOption === "files" && filePaths.length === 0)
@@ -47,29 +85,65 @@ const GenerateGuidelines = () => {
       return;
     }
 
-    setShowError(false);
-    console.log({
-      selectedOption,
-      codebasePath,
-      filePaths,
-      compliancePath,
-      modelType,
-      provider,
-    });
-  };
+    const formData = new FormData();
+    formData.append("selectedOption", selectedOption);
+    formData.append("provider", provider);
+    formData.append("modelType", modelType);
 
+    try {
+      // Handle file selection based on the option
+      if (selectedOption === "codebase") {
+        // Handle directory files
+        const files = Array.from(codebaseInputRef.current.files);
+        files.forEach((file) => {
+          formData.append("files", file);
+        });
+      } else {
+        // Handle multiple files
+        const files = Array.from(filePathsInputRef.current.files);
+        files.forEach((file) => {
+          formData.append("files", file);
+        });
+      }
+
+      const response = await fetch(
+        "http://localhost:5000/api/generate_guidelines",
+        {
+          method: "POST",
+          body: formData, // Don't set Content-Type header - it's automatically set
+        }
+      );
+
+      const data = await response.json();
+      console.log("Response:", data);
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
   return (
     <div className="min-h-screen bg-white p-8">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-16">
-        <div className="w-8 h-8 border border-purple-500 rounded flex items-center justify-center">
-          <span className="text-purple-500">&lt;/&gt;</span>
+      <nav className="bg-white">
+        <div className="container px-8">
+          <div className="flex h-16 items-center">
+            {/* Logo and text aligned to left */}
+            <div className="flex items-center text-xl font-medium">
+              <div className="flex items-start">
+                <img
+                  src="../../../public/Logo.png"
+                  alt="CodeInsight Logo"
+                  className="h-8 w-8"
+                />
+                <span className="ml-2">Code Insight</span>
+              </div>
+            </div>
+            {/* Navigation links with more left spacing */}
+          </div>
         </div>
-        <h1 className="text-xl font-medium">Code Insight</h1>
-      </div>
+      </nav>
 
       {/* Main Form */}
-      <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
+      <form onSubmit={handleSubmit} className="max-w-2xl mx-auto mt-10 ">
         <h2 className="text-2xl font-semibold text-center mb-12">
           Generate Guidelines Document
         </h2>
@@ -135,13 +209,13 @@ const GenerateGuidelines = () => {
                     : "/home/user/file.py"
                 }
                 className={`w-full p-2 border rounded focus:ring-purple-500 focus:border-violet-500 cursor-pointer
-      ${
-        showError &&
-        ((selectedOption === "codebase" && !codebasePath) ||
-          (selectedOption === "files" && filePaths.length === 0))
-          ? "border-red-500"
-          : "border-violet-500"
-      }`}
+     ${
+       showError &&
+       ((selectedOption === "codebase" && !codebasePath) ||
+         (selectedOption === "files" && filePaths.length === 0))
+         ? "border-red-500"
+         : "border-violet-500"
+     }`}
                 readOnly
                 onClick={
                   selectedOption === "codebase"
@@ -162,13 +236,26 @@ const GenerateGuidelines = () => {
                 type="file"
                 ref={codebaseInputRef}
                 className="hidden"
-                webkitdirectory=""
-                directory=""
+                webkitdirectory="true"
+                directory="true"
                 onChange={(e) => {
-                  setCodebasePath(e.target.files[0]?.path || "");
-                  setShowError(false);
+                  const files = e.target.files;
+                  if (files) {
+                    const fileList = Array.from(files).map((file) => ({
+                      name: file.name,
+                      path: file.webkitRelativePath,
+                      file,
+                    }));
+                    console.log("Uploaded files:", fileList);
+                    setCodebasePath(fileList.map((f) => f.path).join(", "));
+                    setShowError(false);
+                  } else {
+                    console.error("No files were uploaded.");
+                    setShowError(true);
+                  }
                 }}
               />
+
               <input
                 type="file"
                 ref={filePathsInputRef}
@@ -176,9 +263,8 @@ const GenerateGuidelines = () => {
                 multiple
                 accept=".py,.js,.java,.cpp,.c,.html,.css"
                 onChange={(e) => {
-                  setFilePaths(
-                    Array.from(e.target.files).map((file) => file.path)
-                  );
+                  const files = e.target.files;
+                  setFilePaths(Array.from(files).map((f) => f.name));
                   setShowError(false);
                 }}
               />
@@ -193,7 +279,7 @@ const GenerateGuidelines = () => {
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
                 className="w-full p-2 border border-violet-500 rounded focus:ring-purple-500 focus:border-purple-500"
-                >
+              >
                 {providers.map((p) => (
                   <option key={p} value={p}>
                     {p}
@@ -208,7 +294,7 @@ const GenerateGuidelines = () => {
                 value={modelType}
                 onChange={(e) => setModelType(e.target.value)}
                 className="w-full p-2 border border-violet-500 rounded focus:ring-purple-500 focus:border-purple-500"
-                >
+              >
                 {modelTypes.map((type) => (
                   <option key={type} value={type}>
                     {type}
@@ -219,15 +305,26 @@ const GenerateGuidelines = () => {
           </div>
 
           <button
-              type="submit"
-              className="w-full mt-6 bg-purple-500 text-white py-2 rounded-md hover:bg-purple-600 
-                       transition-colors duration-200 flex items-center justify-center gap-2"
+            type="submit"
+            className="w-full mt-6 bg-purple-500 text-white py-2 rounded-md hover:bg-purple-600
+                      transition-colors duration-200 flex items-center justify-center gap-2"
+          >
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Run
-            </button>
+              <path
+                d="M5 12h14M12 5l7 7-7 7"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Run
+          </button>
         </div>
       </form>
     </div>
@@ -235,4 +332,3 @@ const GenerateGuidelines = () => {
 };
 
 export default GenerateGuidelines;
-

@@ -3,11 +3,15 @@ import { useNavigate } from 'react-router';
 const Dashboard = () => {
   const navigate = useNavigate();
   const handleGenerateGuidelines = () => {
-    navigate('/generateguidelines');
+    navigate('/generate_guidelines');
     };
   const handleHome = () =>{
-    navigate('/')
+    navigate('/');
   } 
+  const handleReview = () =>{
+    navigate('/analyzecodebase');
+  }
+  
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
@@ -50,7 +54,7 @@ const Dashboard = () => {
             </div>
 
             {/* Review Code Card */}
-            <div className="w-5/12 p-8 border-2 border-purple-300 rounded-2xl hover:shadow-lg transition-all cursor-pointer">
+            <div className="w-5/12 p-8 border-2 border-purple-300 rounded-2xl hover:shadow-lg transition-all cursor-pointer" onClick={handleReview}>
               <div className="flex flex-col items-center text-center">
                 <div className="mb-6">
                   <img src="../../../public/reviewcode.png" alt="Review Icon" className="w-16 h-16" />
